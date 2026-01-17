@@ -118,7 +118,12 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
 
     // Only update if status actually changed
     if (todo.completed !== newCompleted) {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      let apiUrl: string;
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        apiUrl = "http://localhost:8000";
+      } else {
+        apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      }
       try {
         await axios.put(`${apiUrl}/api/todos/${todo.id}`, {
           id: todo.id,

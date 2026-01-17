@@ -42,7 +42,12 @@ const EditTodoForm = ({ todo, onClose }: EditTodoFormProps) => {
   const router = useRouter();
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    let apiUrl: string;
+    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+      apiUrl = "http://localhost:8000";
+    } else {
+      apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    }
     try {
       setLoading(true);
       await axios.put(`${apiUrl}/api/todos/${todo.id}`, {

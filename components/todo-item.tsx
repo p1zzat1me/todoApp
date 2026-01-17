@@ -13,7 +13,12 @@ const TodoItem = ({ id, title, completed, priority, due_date, category }: todos)
   const [isEditing, setIsEditing] = useState(false);
 
   const handleDelete = async (id: any) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    let apiUrl: string;
+    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+      apiUrl = "http://localhost:8000";
+    } else {
+      apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    }
     try {
       await axios.delete(`${apiUrl}/api/todos/${id}`);
       router.refresh();
@@ -24,7 +29,12 @@ const TodoItem = ({ id, title, completed, priority, due_date, category }: todos)
   };
   
   async function toggleTodo(id: string, completed: boolean) {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    let apiUrl: string;
+    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+      apiUrl = "http://localhost:8000";
+    } else {
+      apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    }
     try {
       await axios.put(`${apiUrl}/api/todos/${id}`, {
         id,

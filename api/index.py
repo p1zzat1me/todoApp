@@ -16,9 +16,9 @@ class Todo(SQLModel, table=True):
     due_date: Optional[date] = Field(default=None, index=True)
     category: Optional[str] = Field(default=None, index=True)
 
-connection_string = str(DATABASE_URL).replace(
-"postgresql", "postgresql+psycopg2"
-)
+connection_string = str(DATABASE_URL)
+if connection_string.startswith("postgresql"):
+    connection_string = connection_string.replace("postgresql", "postgresql+psycopg2")
 
 engine = create_engine(connection_string)
 

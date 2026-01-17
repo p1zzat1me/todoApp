@@ -27,7 +27,16 @@ const TodoForm = () => {
   const router = useRouter();
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    // Build the correct API URL
+    let apiUrl: string;
+    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+      // In development, use absolute URL to FastAPI
+      apiUrl = "http://localhost:8000";
+    } else {
+      // In production, use relative path (rewrites to FastAPI)
+      apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    }
+    
     console.log("API URL", apiUrl);
     try {
       setLoading(true);
