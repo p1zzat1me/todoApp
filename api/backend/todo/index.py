@@ -1,4 +1,5 @@
 from typing import Optional
+from fastapi.middleware.cors import CORSMiddleware
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends,HTTPException
@@ -31,6 +32,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # later you can restrict to your Vercel URL
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
@@ -54,13 +63,9 @@ def read_todos():
         todos = session.exec(select(Todo)).all()
         return {"todos": todos}
 
-@app.post("/api/delete/{todo_id}",response_model=Todo)
-async def delete_todo(todo: Todo,session: Annotated[Session, Depends(get_session)]):
-    """
-    Deletes the todo with the specified ID from the database.
-    Assumes you have a database session (e.g., SQLAlchemy session) set up.
-    """
-    db_todo = session.query(Todo).filter(Todo.id == todo.id).first()
+@app.post("/api/delete/{todo_id}", response_model=Todo)
+def delete_todo(todo_id: int, session: Annotated[Session, Depends(get_session)]):
+    db_todo = session.exec(select(Todo).where(Todo.id == todo_id)).first()
     if not db_todo:
         raise HTTPException(status_code=404, detail="Todo not found")
     session.delete(db_todo)
@@ -69,10 +74,11 @@ async def delete_todo(todo: Todo,session: Annotated[Session, Depends(get_session
 
 
 @app.put("/api/todos/{todo_id}", response_model=Todo)
-async def update_todo(todo:Todo, session: Annotated[Session, Depends(get_session)]):
-    db_todo = session.query(Todo).filter(Todo.id == todo.id).first()
-    if not db_todo:
+def update_todo(todo_id: int, todo: Todo, session: Annotated[Session, Depends(get_session)]):
+    db_todo = session.exec(select(Todo).where(Todo.id == todo_id)).first()
+    if not db_t yoursodo:
         raise HTTPException(status_code=404, detail="Todo not found")
     db_todo.completed = todo.completed
     session.commit()
-    return todo
+    session.refresh(db_todo)
+    return db_todo
