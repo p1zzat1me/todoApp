@@ -29,7 +29,7 @@ const TodoForm = () => {
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     // Build the correct API URL
     let apiUrl: string;
-    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
       // In development, use absolute URL to FastAPI
       apiUrl = "http://localhost:8000";
     } else {
@@ -40,21 +40,73 @@ const TodoForm = () => {
     console.log("API URL", apiUrl);
     try {
       setLoading(true);
-      await axios.post(`${apiUrl}/api/todos/new`, {
+      console.log("Submitting todo to:", `${apiUrl}/api/todos/new`);
+      console.log("Payload:", {
         title: data.todo,
         completed: false,
         priority: data.priority || 5,
         due_date: data.due_date || null,
         category: data.category || null,
       });
-      router.push("/");
+      
+      // Add timeout to prevent hanging (10 seconds)
+      const response = await axios.post(
+        `${apiUrl}/api/todos/new`,
+        {
+          title: data.todo,
+          completed: false,
+          priority: data.priority || 5,
+          due_date: data.due_date && data.due_date.trim() !== "" ? data.due_date : null,
+          category: data.category && data.category.trim() !== "" ? data.category : null,
+        },
+        {
+          timeout: 10000, // 10 second timeout
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      console.log("Todo created successfully:", response.data);
       toast.success("Todo added successfully");
-    } catch (error) {
-      console.log(error);
-      toast.error("Something went wrong.");
-    } finally {
+      
+      // Reset form before navigation
       reset();
       setLoading(false);
+      
+      // Small delay before redirect to ensure toast shows
+      setTimeout(() => {
+        // Use full page reload to ensure fresh data from server
+        window.location.href = "/";
+      }, 500);
+    } catch (error) {
+      console.error("Error creating todo:", error);
+      setLoading(false); // Make sure loading is set to false on error
+      
+      if (axios.isAxiosError(error)) {
+        console.error("Response:", error.response?.data);
+        console.error("Status:", error.response?.status);
+        console.error("Error code:", error.code);
+        
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+          toast.error("Request timed out. The server may be slow or not responding. Check your backend.");
+        } else if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
+          toast.error("Cannot connect to server. Make sure the backend is running on http://localhost:8000");
+        } else if (error.response) {
+          // Server responded with error
+          const errorDetail = error.response.data?.detail || error.response.data?.message || error.message;
+          toast.error(`Error: ${errorDetail}`);
+        } else {
+          toast.error(`Network error: ${error.message || "Unknown error occurred"}`);
+        }
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.error("Non-axios error:", errorMessage);
+        toast.error(`Something went wrong: ${errorMessage}`);
+      }
+      
+      // Don't reset form on error - let user see what they entered
+      // reset();
     }
   };
 
@@ -141,7 +193,7 @@ const TodoForm = () => {
             disabled={loading}
             className="disabled:opacity-60"
           >
-            Add Todo <SendHorizonal className="ml-2" size={20} />
+            {loading ? "Adding..." : "Add Todo"} <SendHorizonal className="ml-2" size={20} />
           </Button>
         </div>
       </form>

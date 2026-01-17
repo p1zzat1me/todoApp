@@ -11,6 +11,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -70,8 +71,15 @@ interface DroppableZoneProps {
 }
 
 function DroppableZone({ id, children, className = "" }: DroppableZoneProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: id,
+  });
+
   return (
-    <div className={className}>
+    <div
+      ref={setNodeRef}
+      className={`${className} ${isOver ? "bg-blue-50 border-blue-300" : ""}`}
+    >
       {children}
     </div>
   );
@@ -106,39 +114,83 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
     setActiveId(null);
     setDraggedTodo(null);
 
-    if (!over) return;
+    if (!over) {
+      console.log("No drop target");
+      return;
+    }
 
     const allTodos = [...pendingTodos, ...completedTodos];
     const todo = allTodos.find((t) => t.id === active.id);
     
-    if (!todo) return;
+    if (!todo) {
+      console.log("Todo not found:", active.id);
+      return;
+    }
 
-    const targetZone = over.id as string;
+    // Check if dropped on a zone or on another todo
+    let targetZone: string;
+    
+    // If dropped on a zone (pending-zone or completed-zone)
+    if (over.id === "pending-zone" || over.id === "completed-zone") {
+      targetZone = over.id as string;
+    } else {
+      // If dropped on another todo, find which zone that todo belongs to
+      const targetTodo = allTodos.find((t) => t.id === over.id);
+      if (targetTodo) {
+        targetZone = targetTodo.completed ? "completed-zone" : "pending-zone";
+      } else {
+        console.log("Could not determine target zone");
+        return;
+      }
+    }
+
+    console.log("Target zone:", targetZone);
     const newCompleted = targetZone === "completed-zone";
 
     // Only update if status actually changed
     if (todo.completed !== newCompleted) {
       let apiUrl: string;
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+      if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
         apiUrl = "http://localhost:8000";
       } else {
         apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
       }
+      
+      console.log(`Updating todo ${todo.id} to completed=${newCompleted}`);
+      
       try {
-        await axios.put(`${apiUrl}/api/todos/${todo.id}`, {
-          id: todo.id,
-          title: todo.title,
-          completed: newCompleted,
-          priority: todo.priority || 5,
-          due_date: todo.due_date || null,
-          category: todo.category || null,
-        });
-        router.refresh();
+        const response = await axios.put(
+          `${apiUrl}/api/todos/${todo.id}`,
+          {
+            id: todo.id,
+            title: todo.title,
+            completed: newCompleted,
+            priority: todo.priority || 5,
+            due_date: todo.due_date || null,
+            category: todo.category || null,
+          },
+          {
+            timeout: 10000, // 10 second timeout
+          }
+        );
+        
+        console.log("Update successful:", response.data);
+        
+        // Force a full page refresh to get fresh data
+        window.location.reload();
+        
         toast.success(newCompleted ? "Task marked as done!" : "Task marked as pending!");
       } catch (error) {
-        console.error(error);
-        toast.error("Failed to update task");
+        console.error("Error updating todo:", error);
+        if (axios.isAxiosError(error)) {
+          const errorMsg = error.response?.data?.detail || error.message;
+          toast.error(`Failed to update task: ${errorMsg}`);
+        } else {
+          toast.error("Failed to update task");
+        }
       }
+    } else {
+      console.log("Status unchanged, no update needed");
     }
   }
 

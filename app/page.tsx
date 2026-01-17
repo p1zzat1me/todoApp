@@ -32,18 +32,64 @@ const Home = async ({ searchParams }: { searchParams?: { [key: string]: string |
   const queryString = queryParams.toString();
   
   let todos: todos[] = [];
+  let apiError: string | null = null;
+  
   try {
     const apiRequest = await fetch(`${apiUrl}/api/todos${queryString ? `?${queryString}` : ""}`, {
-      cache: "no-store",
+      cache: "no-store", // Disable caching to always fetch fresh data
     });
-    if (!apiRequest.ok) throw new Error(`API error: ${apiRequest.status}`);
-    const data: { todos: todos[] } = await apiRequest.json();
-    todos = data.todos;
-    console.log("Todos: ", todos);
-  } catch (error) {
+    
+    if (!apiRequest.ok) {
+      apiError = `API returned ${apiRequest.status}: ${apiRequest.statusText}`;
+      console.error(apiError);
+      todos = [];
+    } else {
+      const data: any = await apiRequest.json();
+      // Ensure data is an array and transform id from number to string
+      todos = Array.isArray(data) 
+        ? data.map((todo: any) => {
+            // Safely convert id to string
+            let id = String(todo.id || '');
+            
+            // Safely handle due_date
+            let due_date: string | null = null;
+            if (todo.due_date) {
+              try {
+                if (typeof todo.due_date === 'string') {
+                  due_date = todo.due_date;
+                } else if (todo.due_date instanceof Date) {
+                  due_date = todo.due_date.toISOString().split('T')[0];
+                } else {
+                  // Try to parse as date string
+                  const dateStr = String(todo.due_date);
+                  due_date = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+                }
+              } catch (e) {
+                console.warn('Error parsing due_date:', e);
+                due_date = null;
+              }
+            }
+            
+            return {
+              id,
+              title: String(todo.title || ''),
+              completed: Boolean(todo.completed),
+              priority: Number(todo.priority) || 5,
+              due_date,
+              category: todo.category ? String(todo.category) : null,
+            };
+          })
+        : [];
+    }
+    console.log("Fetched todos count:", todos.length);
+  } catch (error: any) {
+    apiError = error.message || "Failed to connect to backend";
     console.error("Failed to fetch todos:", error);
-    // Return with empty todos array if fetch fails
     todos = [];
+    if (process.env.NODE_ENV === 'development') {
+      console.error("API URL was:", apiUrl);
+      console.error("Error details:", error.message);
+    }
   }
   
   // Filter todos based on status if needed (for display purposes)
@@ -78,6 +124,14 @@ const Home = async ({ searchParams }: { searchParams?: { [key: string]: string |
         </div>
       </div>
       
+      {apiError && (
+        <div className="mx-auto max-w-4xl px-4 mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800 text-sm">
+            <strong>Warning:</strong> {apiError}. Make sure the backend is running on {apiUrl}
+          </p>
+        </div>
+      )}
+
       <div className="flex justify-center">
         <div className="w-full max-w-4xl px-4">
           <Suspense fallback={<div>Loading controls...</div>}>

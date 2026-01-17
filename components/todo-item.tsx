@@ -14,7 +14,7 @@ const TodoItem = ({ id, title, completed, priority, due_date, category }: todos)
 
   const handleDelete = async (id: any) => {
     let apiUrl: string;
-    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
       apiUrl = "http://localhost:8000";
     } else {
       apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
@@ -30,7 +30,7 @@ const TodoItem = ({ id, title, completed, priority, due_date, category }: todos)
   
   async function toggleTodo(id: string, completed: boolean) {
     let apiUrl: string;
-    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
       apiUrl = "http://localhost:8000";
     } else {
       apiUrl = process.env.NEXT_PUBLIC_API_URL || "";

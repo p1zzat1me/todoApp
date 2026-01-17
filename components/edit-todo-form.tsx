@@ -43,7 +43,7 @@ const EditTodoForm = ({ todo, onClose }: EditTodoFormProps) => {
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     let apiUrl: string;
-    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
       apiUrl = "http://localhost:8000";
     } else {
       apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
