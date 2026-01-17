@@ -18,8 +18,15 @@ const Home = async ({ searchParams }: { searchParams?: { [key: string]: string |
     // In development, connect directly to FastAPI backend
     apiUrl = "http://127.0.0.1:8000";
   } else {
-    // In production, use the Vercel URL or environment variable
-    apiUrl = process.env.NEXT_PUBLIC_API_URL || `https://${process.env.VERCEL_URL || "localhost:3000"}`;
+    // In production, use the environment variable (must be set)
+    // This should point to your deployed FastAPI backend (Railway, Render, etc.)
+    apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    
+    if (!apiUrl) {
+      console.error("ERROR: NEXT_PUBLIC_API_URL is not set in production!");
+      console.error("Please set NEXT_PUBLIC_API_URL in Vercel environment variables");
+      console.error("This should point to your deployed FastAPI backend URL");
+    }
   }
 
   // Build query string from searchParams

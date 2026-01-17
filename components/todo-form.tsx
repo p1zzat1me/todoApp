@@ -33,8 +33,15 @@ const TodoForm = () => {
       // In development, use absolute URL to FastAPI
       apiUrl = "http://localhost:8000";
     } else {
-      // In production, use relative path (rewrites to FastAPI)
+      // In production, use the deployed backend URL from environment variable
+      // If not set, it means backend is not deployed - show error
       apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      
+      if (!apiUrl) {
+        toast.error("Backend API URL not configured. Please set NEXT_PUBLIC_API_URL environment variable.");
+        console.error("NEXT_PUBLIC_API_URL is not set in production!");
+        return;
+      }
     }
     
     console.log("API URL", apiUrl);

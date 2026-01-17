@@ -153,7 +153,12 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
       if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
         apiUrl = "http://localhost:8000";
       } else {
+        // In production, use environment variable
         apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        if (!apiUrl) {
+          toast.error("Backend API URL not configured. Please set NEXT_PUBLIC_API_URL.");
+          return;
+        }
       }
       
       console.log(`Updating todo ${todo.id} to completed=${newCompleted}`);

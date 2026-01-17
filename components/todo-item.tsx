@@ -17,7 +17,12 @@ const TodoItem = ({ id, title, completed, priority, due_date, category }: todos)
     if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
       apiUrl = "http://localhost:8000";
     } else {
+      // In production, use environment variable or fallback to relative path
       apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      if (!apiUrl) {
+        toast.error("Backend API URL not configured. Please set NEXT_PUBLIC_API_URL.");
+        return;
+      }
     }
     try {
       await axios.delete(`${apiUrl}/api/todos/${id}`);
@@ -33,7 +38,12 @@ const TodoItem = ({ id, title, completed, priority, due_date, category }: todos)
     if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
       apiUrl = "http://localhost:8000";
     } else {
+      // In production, use environment variable
       apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      if (!apiUrl) {
+        toast.error("Backend API URL not configured. Please set NEXT_PUBLIC_API_URL.");
+        return;
+      }
     }
     try {
       await axios.put(`${apiUrl}/api/todos/${id}`, {

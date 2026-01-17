@@ -1,5 +1,6 @@
 from typing import Optional
 from datetime import date, datetime
+import os
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query
@@ -119,6 +120,8 @@ def init_database():
             detail=f"Failed to create tables: {error_msg}"
         )
 
+# CORS Origins - Allow localhost for development and Vercel for production
+# In production, you may want to restrict to specific domains
 origins = [
     "http://localhost",
     "http://127.0.0.1",
@@ -130,13 +133,23 @@ origins = [
     "http://127.0.0.1:3002",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "https://nextjs-fastapi-todo-app-eosin.vercel.app",
 ]
+
+# For production, allow all origins for simplicity
+# In production, you can restrict to specific domains by setting ALLOWED_ORIGINS env var
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_env:
+    # If ALLOWED_ORIGINS is set, use it (comma-separated list)
+    origins.extend([origin.strip() for origin in allowed_origins_env.split(",")])
+else:
+    # Otherwise, allow all origins in production (not recommended for production)
+    # For now, we'll allow all origins - you should set ALLOWED_ORIGINS env var
+    origins = ["*"]  # Allow all origins
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=origins if origins != ["*"] else ["*"],
+    allow_credentials=True if origins != ["*"] else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
