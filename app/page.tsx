@@ -11,7 +11,16 @@ import { Suspense } from "react";
 export const revalidate = 0;
 
 const Home = async ({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
+  // For Server Components, we need absolute URLs
+  let apiUrl: string;
+  
+  if (process.env.NODE_ENV === "development") {
+    // In development, connect directly to FastAPI backend
+    apiUrl = "http://127.0.0.1:8000";
+  } else {
+    // In production, use the Vercel URL or environment variable
+    apiUrl = process.env.NEXT_PUBLIC_API_URL || `https://${process.env.VERCEL_URL || "localhost:3000"}`;
+  }
 
   // Build query string from searchParams
   const queryParams = new URLSearchParams();
@@ -21,12 +30,21 @@ const Home = async ({ searchParams }: { searchParams?: { [key: string]: string |
   if (searchParams?.category) queryParams.append("category", searchParams.category as string);
 
   const queryString = queryParams.toString();
-  const apiRequest = await fetch(`${apiUrl}/todos${queryString ? `?${queryString}` : ""}`, {
-    cache: "no-store",
-  });
-  const data: { todos: todos[] } = await apiRequest.json();
-  const { todos } = data;
-  console.log("Todos: ", todos);
+  
+  let todos: todos[] = [];
+  try {
+    const apiRequest = await fetch(`${apiUrl}/api/todos${queryString ? `?${queryString}` : ""}`, {
+      cache: "no-store",
+    });
+    if (!apiRequest.ok) throw new Error(`API error: ${apiRequest.status}`);
+    const data: { todos: todos[] } = await apiRequest.json();
+    todos = data.todos;
+    console.log("Todos: ", todos);
+  } catch (error) {
+    console.error("Failed to fetch todos:", error);
+    // Return with empty todos array if fetch fails
+    todos = [];
+  }
   
   // Filter todos based on status if needed (for display purposes)
   const statusFilter = (searchParams?.status as string) || "all";
