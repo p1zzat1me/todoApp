@@ -1,61 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  DragStartEvent,
+  DragEndEvent,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import TodoItem from "@/components/todo-item";
 import { todos } from "@/lib/types";
-import { GripVertical } from "lucide-react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-
-// Dynamically import dnd-kit
-let DndContextLib: any;
-let SortableContextLib: any;
-let useSortableLib: any;
-let useDroppableLib: any;
-let closestCenterLib: any;
-let KeyboardSensorLib: any;
-let PointerSensorLib: any;
-let useSensorLib: any;
-let useSensorsLib: any;
-let DragOverlayLib: any;
-let sortableKeyboardCoordinatesLib: any;
-let verticalListSortingStrategyLib: any;
-let CSSLib: any;
-
-try {
-  const dndCore = require("@dnd-kit/core");
-  const dndSortable = require("@dnd-kit/sortable");
-  const dndUtils = require("@dnd-kit/utilities");
-  
-  DndContextLib = dndCore.DndContext;
-  closestCenterLib = dndCore.closestCenter;
-  KeyboardSensorLib = dndCore.KeyboardSensor;
-  PointerSensorLib = dndCore.PointerSensor;
-  useSensorLib = dndCore.useSensor;
-  useSensorsLib = dndCore.useSensors;
-  DragOverlayLib = dndCore.DragOverlay;
-  useDroppableLib = dndCore.useDroppable;
-  
-  SortableContextLib = dndSortable.SortableContext;
-  sortableKeyboardCoordinatesLib = dndSortable.sortableKeyboardCoordinates;
-  useSortableLib = dndSortable.useSortable;
-  verticalListSortingStrategyLib = dndSortable.verticalListSortingStrategy;
-  
-  CSSLib = dndUtils.CSS;
-} catch (e) {
-  console.warn("@dnd-kit packages not installed. Drag-and-drop disabled.");
-}
 
 interface SortableTodoItemProps {
   todo: todos;
 }
 
 function SortableTodoItem({ todo }: SortableTodoItemProps) {
-  if (!useSortableLib) {
-    return <TodoItem {...todo} />;
-  }
-
   const {
     attributes,
     listeners,
@@ -63,10 +39,10 @@ function SortableTodoItem({ todo }: SortableTodoItemProps) {
     transform,
     transition,
     isDragging,
-  } = useSortableLib({ id: todo.id });
+  } = useSortable({ id: todo.id });
 
   const style = {
-    transform: CSSLib.Transform.toString(transform),
+    transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
@@ -94,17 +70,8 @@ interface DroppableZoneProps {
 }
 
 function DroppableZone({ id, children, className = "" }: DroppableZoneProps) {
-  if (!useDroppableLib) {
-    return <div className={className}>{children}</div>;
-  }
-
-  const { setNodeRef, isOver } = useDroppableLib({ id });
-
   return (
-    <div
-      ref={setNodeRef}
-      className={`${className} ${isOver ? "ring-2 ring-blue-500 ring-offset-2 bg-blue-50" : ""}`}
-    >
+    <div className={className}>
       {children}
     </div>
   );
@@ -120,49 +87,10 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedTodo, setDraggedTodo] = useState<todos | null>(null);
 
-  if (!DndContextLib || !SortableContextLib) {
-    return (
-      <div className="flex items-center justify-center gap-16 flex-wrap">
-        <div className="lg:w-1/3 md:w-2/5 w-[95%] p-6 overflow-scroll no-scrollbar border h-[25rem]">
-          <h3 className="text-2xl font-semibold text-center text-gray-700 mb-4">
-            Pending Tasks
-          </h3>
-          <main className="my-8">
-            {pendingTodos.length > 0 ? (
-              pendingTodos.map((todo) => (
-                <TodoItem key={todo.id} {...todo} />
-              ))
-            ) : (
-              <p className="my-8 text-lg text-muted-foreground text-center">
-                No Tasks
-              </p>
-            )}
-          </main>
-        </div>
-        <div className="lg:w-1/3 md:w-2/5 w-[95%] p-6 overflow-scroll no-scrollbar border h-[25rem]">
-          <h3 className="text-2xl font-semibold text-center text-gray-700 mb-4">
-            Completed Tasks
-          </h3>
-          <main className="my-8">
-            {completedTodos.length > 0 ? (
-              completedTodos.map((todo) => (
-                <TodoItem key={todo.id} {...todo} />
-              ))
-            ) : (
-              <p className="my-8 text-lg text-muted-foreground text-center">
-                No Tasks
-              </p>
-            )}
-          </main>
-        </div>
-      </div>
-    );
-  }
-
-  const sensors = useSensorsLib(
-    useSensorLib(PointerSensorLib),
-    useSensorLib(KeyboardSensorLib, {
-      coordinateGetter: sortableKeyboardCoordinatesLib,
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
@@ -210,9 +138,9 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
   }
 
   return (
-    <DndContextLib
+    <DndContext
       sensors={sensors}
-      collisionDetection={closestCenterLib}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -225,9 +153,9 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
           <h3 className="text-2xl font-semibold text-center text-gray-700 mb-4">
             Pending Tasks
           </h3>
-          <SortableContextLib
+          <SortableContext
             items={pendingTodos.map((t) => t.id)}
-            strategy={verticalListSortingStrategyLib}
+            strategy={verticalListSortingStrategy}
           >
             <main className="my-8">
               {pendingTodos.length > 0 ? (
@@ -240,7 +168,7 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
                 </p>
               )}
             </main>
-          </SortableContextLib>
+          </SortableContext>
         </DroppableZone>
 
         {/* Completed Tasks Zone */}
@@ -251,9 +179,9 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
           <h3 className="text-2xl font-semibold text-center text-gray-700 mb-4">
             Completed Tasks
           </h3>
-          <SortableContextLib
+          <SortableContext
             items={completedTodos.map((t) => t.id)}
-            strategy={verticalListSortingStrategyLib}
+            strategy={verticalListSortingStrategy}
           >
             <main className="my-8">
               {completedTodos.length > 0 ? (
@@ -266,11 +194,11 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
                 </p>
               )}
             </main>
-          </SortableContextLib>
+          </SortableContext>
         </DroppableZone>
       </div>
 
-      <DragOverlayLib>
+      <DragOverlay>
         {draggedTodo ? (
           <div className="opacity-50 bg-white border rounded-lg p-4 shadow-lg">
             <div className="flex items-center gap-3">
@@ -279,7 +207,7 @@ export default function DraggableTodos({ pendingTodos, completedTodos }: Draggab
             </div>
           </div>
         ) : null}
-      </DragOverlayLib>
-    </DndContextLib>
+      </DragOverlay>
+    </DndContext>
   );
 }
