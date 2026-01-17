@@ -11,7 +11,7 @@ import { Suspense } from "react";
 export const revalidate = 0;
 
 const Home = async ({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
 
   // Build query string from searchParams
   const queryParams = new URLSearchParams();
@@ -21,7 +21,7 @@ const Home = async ({ searchParams }: { searchParams?: { [key: string]: string |
   if (searchParams?.category) queryParams.append("category", searchParams.category as string);
 
   const queryString = queryParams.toString();
-  const apiRequest = await fetch(`${apiUrl}/api/todos${queryString ? `?${queryString}` : ""}`, {
+  const apiRequest = await fetch(`${apiUrl}/todos${queryString ? `?${queryString}` : ""}`, {
     cache: "no-store",
   });
   const data: { todos: todos[] } = await apiRequest.json();
